@@ -20,7 +20,6 @@ public class Zone {
     @Column(name = "code_postal", length = 20)
     private String codePostal;
 
-    // Getters et Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
