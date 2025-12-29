@@ -89,5 +89,56 @@ public class ColisService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<ColisDTO> getColisSansLivreur() {
+        logger.info("Récupération des colis sans livreur");
+        return colisRepository.findByIdLivreurIsNull()
+                .stream()
+                .map(colisMapper::toDto)
+                .toList();
+    }
+
+    public ColisDTO updateStatut(Long id, String nouveauStatut) {
+        logger.info("Mise à jour du statut du colis ID={} vers '{}'", id, nouveauStatut);
+
+        Colis colis = colisRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Colis", "id", id));
+
+        colis.setStatut(nouveauStatut);
+        Colis updated = colisRepository.save(colis);
+
+        return colisMapper.toDto(updated);
+    }
+
+    public ColisDTO assignerLivreur(Long colisId, Long livreurId) {
+        logger.info("Assignation du livreur ID={} au colis ID={}", livreurId, colisId);
+
+        Colis colis = colisRepository.findById(colisId)
+                .orElseThrow(() -> new ResourceNotFoundException("Colis", "id", colisId));
+
+        if (colis.getIdLivreur() != null) {
+            throw new BusinessException("Ce colis est déjà assigné à un livreur");
+        }
+
+        Livreur livreur = livreurRepository.findById(livreurId)
+                .orElseThrow(() -> new ResourceNotFoundException("Livreur", "id", livreurId));
+
+        colis.setIdLivreur(livreur);
+        Colis updated = colisRepository.save(colis);
+
+        return colisMapper.toDto(updated);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ColisDTO> filtrerColis(List<String> statuts, Long zoneId,
+                                       String ville, List<String> priorites,
+                                       Pageable pageable) {
+        logger.info("Filtrage des colis");
+        return colisRepository
+                .findByStatutInAndIdZone_IdAndVilleDestinationContainingIgnoreCaseAndPrioriteIn(
+                        statuts, zoneId, ville != null ? ville : "", priorites, pageable)
+                .map(colisMapper::toDto);
+    }
+
 
 }
