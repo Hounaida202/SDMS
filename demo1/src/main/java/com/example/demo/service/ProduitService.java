@@ -31,4 +31,11 @@ public class ProduitService {
         return mapper.toDto(saved);
     }
 
+    @Transactional(readOnly = true)
+    public ProduitDTO getById(Long id) {
+        logger.info("Récupération du produit ID={}", id);
+        Produit entity = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit", "id", id));
+        return mapper.toDto(entity);
+    }
 }
