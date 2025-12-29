@@ -140,5 +140,11 @@ public class ColisService {
                 .map(colisMapper::toDto);
     }
 
+    @Transactional(readOnly = true)
+    public long compterColisParLivreur(Long livreurId) {
+        logger.info("Comptage des colis du livreur ID={}", livreurId);
+        return colisRepository.countByIdLivreur_Id(livreurId);
+    }
+
 
 }
