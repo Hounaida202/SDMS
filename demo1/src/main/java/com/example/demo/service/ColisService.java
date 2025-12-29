@@ -22,5 +22,56 @@ import java.util.List;
 @Transactional
 public class ColisService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ColisService.class);
+
+    @Autowired
+    private ColisRepository colisRepository;
+
+    @Autowired
+    private ClientExpediteurRepository clientRepository;
+
+    @Autowired
+    private DestinataireRepository destinataireRepository;
+
+    @Autowired
+    private ZoneRepository zoneRepository;
+
+    @Autowired
+    private LivreurRepository livreurRepository;
+
+    @Autowired
+    private ColisMapper colisMapper;
+
+    public ColisDTO creerColis(ColisDTO dto) {
+        logger.info("Création d'un nouveau colis");
+
+        Colis colis = colisMapper.toEntity(dto);
+
+        ClientExpediteur client = clientRepository.findById(dto.getClientExpediteurId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client", "id", dto.getClientExpediteurId()));
+        colis.setIdClientExpediteur(client);
+
+        Destinataire destinataire = destinataireRepository.findById(dto.getDestinataireId())
+                .orElseThrow(() -> new ResourceNotFoundException("Destinataire", "id", dto.getDestinataireId()));
+        colis.setIdDestinataire(destinataire);
+
+        Zone zone = zoneRepository.findById(dto.getZoneId())
+                .orElseThrow(() -> new ResourceNotFoundException("Zone", "id", dto.getZoneId()));
+        colis.setIdZone(zone);
+
+        Colis saved = colisRepository.save(colis);
+        logger.info("Colis créé avec succès, ID={}", saved.getId());
+
+        return colisMapper.toDto(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public ColisDTO getColisById(Long id) {
+        logger.info("Récupération du colis ID={}", id);
+        Colis colis = colisRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Colis", "id", id));
+        return colisMapper.toDto(colis);
+    }
+
 
 }
