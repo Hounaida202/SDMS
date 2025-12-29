@@ -41,5 +41,11 @@ public class ClientExpediteurService {
         return mapper.toDto(saved);
     }
 
+    public ClientExpediteurDTO getById(Long id) {
+        logger.info("Récupération du client ID={}", id);
+        ClientExpediteur client = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Client", "id", id));
+        return mapper.toDto(client);
+    }
 
 }
