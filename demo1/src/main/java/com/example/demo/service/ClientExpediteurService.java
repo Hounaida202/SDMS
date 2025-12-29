@@ -48,4 +48,13 @@ public class ClientExpediteurService {
         return mapper.toDto(client);
     }
 
+    @Transactional(readOnly = true)
+    public List<ClientExpediteurDTO> rechercherParNom(String nom) {
+        logger.info("Recherche des clients avec le nom: {}", nom);
+        return repository.findByNomIgnoreCase(nom)
+                .stream()
+                .map(mapper::toDto)
+                .toList();
+    }
+
 }
