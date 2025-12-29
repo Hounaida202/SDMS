@@ -73,5 +73,21 @@ public class ColisService {
         return colisMapper.toDto(colis);
     }
 
+    @Transactional(readOnly = true)
+    public Page<ColisDTO> getColisByClient(Long clientId, Pageable pageable) {
+        logger.info("Récupération des colis du client ID={}", clientId);
+        return colisRepository.findByIdClientExpediteur_Id(clientId, pageable)
+                .map(colisMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ColisDTO> getColisByLivreur(Long livreurId) {
+        logger.info("Récupération des colis du livreur ID={}", livreurId);
+        return colisRepository.findByIdLivreur_Id(livreurId)
+                .stream()
+                .map(colisMapper::toDto)
+                .toList();
+    }
+
 
 }
