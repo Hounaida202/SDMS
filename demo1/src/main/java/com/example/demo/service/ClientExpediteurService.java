@@ -40,7 +40,7 @@ public class ClientExpediteurService {
         logger.info("Client créé avec ID={}", saved.getId());
         return mapper.toDto(saved);
     }
-
+    @Transactional(readOnly = true)
     public ClientExpediteurDTO getById(Long id) {
         logger.info("Récupération du client ID={}", id);
         ClientExpediteur client = repository.findById(id)
