@@ -13,5 +13,14 @@ import java.util.List;
 @RequestMapping("/api/clients")
 public class ClientExpediteurController {
 
+    private final ClientExpediteurService service;
 
+    public ClientExpediteurController(ClientExpediteurService service) {
+        this.service = service;
+    }
+    @PostMapping
+    public ResponseEntity<ClientExpediteurDTO> creer(@Valid @RequestBody ClientExpediteurDTO dto) {
+        ClientExpediteurDTO created = service.creer(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
 }
