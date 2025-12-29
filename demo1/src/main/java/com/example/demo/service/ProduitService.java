@@ -15,6 +15,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ProduitService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ProduitService.class);
 
+    @Autowired
+    private ProduitRepository repository;
+
+    @Autowired
+    private ProduitMapper mapper;
+
+    public ProduitDTO creer(ProduitDTO dto) {
+        logger.info("Création d'un produit: {}", dto.getNom());
+        Produit entity = mapper.toEntity(dto);
+        Produit saved = repository.save(entity);
+        logger.info("Produit créé avec ID={}", saved.getId());
+        return mapper.toDto(saved);
+    }
 
 }
