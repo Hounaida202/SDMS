@@ -21,5 +21,9 @@ public class ZoneController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-
+    @GetMapping("/{id}")
+    public ResponseEntity<ZoneDTO> getById(@PathVariable Long id) {
+        ZoneDTO zone = service.getById(id);
+        return ResponseEntity.ok(zone);
+    }
 }
