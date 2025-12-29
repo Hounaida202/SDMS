@@ -14,5 +14,7 @@ import java.util.List;
 @Repository
 public interface ColisRepository extends JpaRepository<Colis, Long> {
 
+    Page<Colis> findByIdClientExpediteur_Id(Long clientId, Pageable pageable);
 
+    List<Colis> findByIdLivreur_Id(Long livreurId);
 }
