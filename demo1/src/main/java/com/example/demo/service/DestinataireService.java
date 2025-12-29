@@ -31,5 +31,11 @@ public class DestinataireService {
         return mapper.toDto(saved);
     }
 
-
+    @Transactional(readOnly = true)
+    public DestinataireDTO getById(Long id) {
+        logger.info("Récupération du destinataire ID={}", id);
+        Destinataire entity = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Destinataire", "id", id));
+        return mapper.toDto(entity);
+    }
     }
