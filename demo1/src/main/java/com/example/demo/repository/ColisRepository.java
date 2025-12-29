@@ -17,4 +17,17 @@ public interface ColisRepository extends JpaRepository<Colis, Long> {
     Page<Colis> findByIdClientExpediteur_Id(Long clientId, Pageable pageable);
 
     List<Colis> findByIdLivreur_Id(Long livreurId);
+
+    Page<Colis> findByStatutInAndIdZone_IdAndVilleDestinationContainingIgnoreCaseAndPrioriteIn(
+            List<String> statuts,
+            Long idZone,
+            String ville,
+            List<String> priorites,
+            Pageable pageable
+    );
+
+    long countByIdLivreur_Id(Long livreurId);
+
+    @Query("SELECT COALESCE(SUM(c.poids), 0) FROM Colis c WHERE c.idLivreur.id = :livreurId")
+    BigDecimal getPoidsTotalParLivreur(@Param("livreurId") Long livreurId);
 }
