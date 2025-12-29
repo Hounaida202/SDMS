@@ -23,4 +23,16 @@ public class ClientExpediteurController {
         ClientExpediteurDTO created = service.creer(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ClientExpediteurDTO> getById(@PathVariable Long id) {
+        ClientExpediteurDTO client = service.getById(id);
+        return ResponseEntity.ok(client);
+    }
+
+    @GetMapping("/recherche")
+    public ResponseEntity<List<ClientExpediteurDTO>> rechercherParNom(@RequestParam String nom) {
+        List<ClientExpediteurDTO> clients = service.rechercherParNom(nom);
+        return ResponseEntity.ok(clients);
+    }
 }
