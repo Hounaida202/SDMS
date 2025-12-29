@@ -8,4 +8,5 @@ import java.util.List;
 
 @Repository
 public interface ClientExpediteurRepository extends JpaRepository<ClientExpediteur, Long> {
+    List<ClientExpediteur> findByNomIgnoreCase(String nom);
 }
