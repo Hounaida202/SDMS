@@ -146,5 +146,9 @@ public class ColisService {
         return colisRepository.countByIdLivreur_Id(livreurId);
     }
 
-
+    @Transactional(readOnly = true)
+    public BigDecimal calculerPoidsTotalParLivreur(Long livreurId) {
+        logger.info("Calcul du poids total pour le livreur ID={}", livreurId);
+        return colisRepository.getPoidsTotalParLivreur(livreurId);
+    }
 }
