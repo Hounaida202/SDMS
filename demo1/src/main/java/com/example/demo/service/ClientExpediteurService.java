@@ -8,6 +8,9 @@ import com.example.demo.repository.ClientExpediteurRepository;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +23,23 @@ import java.util.List;
 @Slf4j
 public class ClientExpediteurService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ClientExpediteurService.class);
 
+    @Autowired
+    private ClientExpediteurRepository repository;
+
+    @Autowired
+    private ClientExpediteurMapper mapper;
+
+    public ClientExpediteurDTO creer(ClientExpediteurDTO dto) {
+        logger.info("Création d'un client expéditeur: {}", dto.getNom());
+
+        ClientExpediteur client = mapper.toEntity(dto);
+        ClientExpediteur saved = repository.save(client);
+
+        logger.info("Client créé avec ID={}", saved.getId());
+        return mapper.toDto(saved);
+    }
 
 
 }
