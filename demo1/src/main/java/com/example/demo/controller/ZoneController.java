@@ -12,5 +12,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/zones")
 public class ZoneController {
 
+    @Autowired
+    private ZoneService service;
+
+    @PostMapping
+    public ResponseEntity<ZoneDTO> creer(@Valid @RequestBody ZoneDTO dto) {
+        ZoneDTO created = service.creer(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
 
 }
