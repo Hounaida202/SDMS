@@ -23,5 +23,13 @@ public class DestinataireService {
     @Autowired
     private DestinataireMapper mapper;
 
+    public DestinataireDTO creer(DestinataireDTO dto) {
+        logger.info("Création d'un destinataire: {} {}", dto.getNom(), dto.getPrenom());
+        Destinataire entity = mapper.toEntity(dto);
+        Destinataire saved = repository.save(entity);
+        logger.info("Destinataire créé avec ID={}", saved.getId());
+        return mapper.toDto(saved);
+    }
 
-}
+
+    }
