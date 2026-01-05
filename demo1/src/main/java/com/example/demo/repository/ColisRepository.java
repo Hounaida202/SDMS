@@ -1,5 +1,6 @@
 package com.example.demo.repository;
 
+import com.example.demo.dto.ColisDTO;
 import com.example.demo.entity.Colis;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,4 +31,7 @@ public interface ColisRepository extends JpaRepository<Colis, Long> {
 
     @Query("SELECT COALESCE(SUM(c.poids), 0) FROM Colis c WHERE c.idLivreur.id = :livreurId")
     BigDecimal getPoidsTotalParLivreur(@Param("livreurId") Long livreurId);
+
+    List<Colis> findByIdLivreurIsNull();
+
 }
