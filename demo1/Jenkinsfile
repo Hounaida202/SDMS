@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'etrichi'
+        // Utilisez l'ID que vous avez créé dans Jenkins
+        DOCKERHUB_CREDENTIALS = 'dckr_pat_gWXJHP55f3OLCpr63tSiIM5KgIg'
         IMAGE_NAME = 'hounaida202/demo1-app'
         SONAR_TOKEN = '81b9323901c5b4fffb0a0adfe88b79e178a92f42'
     }
@@ -11,10 +12,7 @@ pipeline {
         stage('Build & Tests') {
             steps {
                 dir('demo1') {
-                    // 1. Clean, compile, tests
                     bat 'mvn clean compile test'
-
-                    // 2. Rapport JaCoCo
                     bat 'mvn jacoco:report'
                 }
             }
@@ -23,8 +21,7 @@ pipeline {
         stage('Code Quality - SonarQube') {
             steps {
                 dir('demo1') {
-                    // 3. SonarQube
-                    bat 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar -Dsonar.login=%SONAR_TOKEN%'
+                    bat 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar -Dsonar.login=${SONAR_TOKEN}'
                 }
             }
         }
@@ -32,7 +29,6 @@ pipeline {
         stage('Package JAR') {
             steps {
                 dir('demo1') {
-                    // 4. IMPORTANT : Créer le JAR
                     bat 'mvn package -DskipTests'
                 }
             }
@@ -41,8 +37,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 dir('demo1') {
-                    // 5. Maintenant Docker trouvera le JAR
-                    bat 'docker build -t %IMAGE_NAME% .'
+                    // Ajouter un tag avec le numéro de build
+                    bat "docker build -t ${IMAGE_NAME}:latest -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
                 }
             }
         }
@@ -50,15 +46,19 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 dir('demo1') {
-                    withCredentials([usernamePassword(
-                        credentialsId: DOCKERHUB_CREDENTIALS,
-                        passwordVariable: 'PASS',
-                        usernameVariable: 'USER'
-                    )]) {
-                        bat """
-                            echo %PASS% | docker login -u %USER% --password-stdin
-                            docker push %IMAGE_NAME%
-                        """
+                    script {
+                        withCredentials([usernamePassword(
+                            credentialsId: DOCKERHUB_CREDENTIALS,
+                            passwordVariable: 'DOCKER_PASSWORD',
+                            usernameVariable: 'DOCKER_USERNAME'
+                        )]) {
+                            // Méthode pour Windows avec echo
+                            bat """
+                                echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
+                                docker push ${env.IMAGE_NAME}:latest
+                                docker push ${env.IMAGE_NAME}:${env.BUILD_NUMBER}
+                            """
+                        }
                     }
                 }
             }
@@ -71,6 +71,9 @@ pipeline {
                     bat 'docker-compose up -d'
                     bat 'timeout /t 30 /nobreak'
                     bat 'docker-compose ps'
+
+                    // Vérification supplémentaire
+                    bat 'curl http://localhost:8080/health || echo "Service may still be starting"'
                 }
             }
         }
@@ -79,12 +82,27 @@ pipeline {
     post {
         always {
             echo 'Pipeline terminé'
+            // Nettoyage
+            dir('demo1') {
+                bat 'docker system prune -f || echo "Cleanup failed"'
+            }
         }
         success {
-            echo ' SUCCÈS : Tout est OK !'
+            echo 'SUCCÈS : Tout est OK !'
+            // Notification optionnelle
+            emailext (
+                subject: "Build ${JOB_NAME} - ${BUILD_NUMBER} SUCCÈS",
+                body: "Le pipeline Jenkins a réussi.\n\nDétails :\nJob: ${JOB_NAME}\nBuild: ${BUILD_NUMBER}\nImage: ${IMAGE_NAME}:${BUILD_NUMBER}\n\nConsultez SonarQube pour les métriques qualité.",
+                to: 'votre-email@exemple.com'
+            )
         }
         failure {
-            echo ' ÉCHEC : Vérifiez les logs'
+            echo 'ÉCHEC : Vérifiez les logs'
+            emailext (
+                subject: "Build ${JOB_NAME} - ${BUILD_NUMBER} ÉCHEC",
+                body: "Le pipeline Jenkins a échoué.\n\nConsultez les logs: ${BUILD_URL}",
+                to: 'votre-email@exemple.com'
+            )
         }
     }
 }
