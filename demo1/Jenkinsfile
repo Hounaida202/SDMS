@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // Utilisez l'ID que vous avez créé dans Jenkins
-        DOCKERHUB_CREDENTIALS = 'dckr_pat_gWXJHP55f3OLCpr63tSiIM5KgIg'
+        DOCKERHUB_CREDENTIALS = 'hounaida202'
         IMAGE_NAME = 'hounaida202/demo1-app'
         SONAR_TOKEN = '81b9323901c5b4fffb0a0adfe88b79e178a92f42'
     }
