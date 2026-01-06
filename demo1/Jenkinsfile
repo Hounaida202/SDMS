@@ -7,6 +7,23 @@ pipeline {
     }
 
     stages {
+        stage('Check Docker') {
+            steps {
+                script {
+                    echo 'Checking Docker status...'
+                    // Vérifier si Docker fonctionne
+                    def dockerCheck = bat(
+                        script: 'docker version > nul 2>&1 && echo DOCKER_RUNNING || echo DOCKER_NOT_RUNNING',
+                        returnStdout: true
+                    ).trim()
+
+                    if (dockerCheck.contains('DOCKER_NOT_RUNNING')) {
+                        error('Docker is not running! Please start Docker Desktop manually.')
+                    }
+                }
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
