@@ -2,8 +2,13 @@ pipeline {
     agent any
 
     environment {
+        // Docker
         DOCKERHUB_CREDENTIALS = 'etrichi'
         IMAGE_NAME = 'hounaida202/demo1-app'
+
+        // SonarQube
+        SONAR_TOKEN = credentials('5dec20621a223f3621fdb93ca284fbad5d0f1b1e')  // À créer dans Jenkins
+        SONAR_HOST_URL = 'http://localhost:9000'  // ou https://sonarcloud.io
     }
 
     stages {
@@ -14,10 +19,43 @@ pipeline {
             }
         }
 
-        stage('Run Unit Tests') {
+        stage('Build & Unit Tests') {
             steps {
                 dir('demo1') {
-                    bat 'mvn clean test'
+                    bat 'mvn clean compile'
+                }
+            }
+        }
+
+        stage('Code Coverage (JaCoCo)') {
+            steps {
+                dir('demo1') {
+                    bat 'mvn test jacoco:report'
+
+                    // Vérifier la couverture
+                    script {
+                        def coverage = bat(
+                            script: 'mvn jacoco:check',
+                            returnStatus: true
+                        )
+
+                        if (coverage != 0) {
+                            error 'Code coverage is below minimum threshold!'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Code Quality Analysis (SonarQube)') {
+            steps {
+                dir('demo1') {
+                    bat """
+                        mvn sonar:sonar \
+                            -Dsonar.projectKey=demo1 \
+                            -Dsonar.host.url=%SONAR_HOST_URL% \
+                            -Dsonar.login=%SONAR_TOKEN%
+                    """
                 }
             }
         }
@@ -30,16 +68,16 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Push to Docker Hub') {
             steps {
                 dir('demo1') {
                     withCredentials([usernamePassword(
                         credentialsId: DOCKERHUB_CREDENTIALS,
-                        passwordVariable: 'PASS',
-                        usernameVariable: 'USER'
+                        passwordVariable: 'DOCKER_PASS',
+                        usernameVariable: 'DOCKER_USER'
                     )]) {
                         bat """
-                            echo %PASS% | docker login -u %USER% --password-stdin
+                            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                             docker push %IMAGE_NAME%
                         """
                     }
@@ -52,8 +90,25 @@ pipeline {
                 dir('demo1') {
                     bat 'docker-compose down || echo "No containers to stop"'
                     bat 'docker-compose up -d'
-                    bat 'ping -n 10 127.0.0.1 > nul'
+                    bat 'timeout /t 20 /nobreak'
                     bat 'docker-compose ps'
+                }
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                dir('demo1') {
+                    script {
+                        // Attendre que l'application soit prête
+                        bat 'timeout /t 30 /nobreak'
+
+                        // Exécuter des tests d'intégration (si vous en avez)
+                        // bat 'mvn verify -DskipUnitTests'
+
+                        // OU simplement vérifier que l'application répond
+                        bat 'curl -f http://localhost:8081/actuator/health || exit 1'
+                    }
                 }
             }
         }
@@ -61,21 +116,37 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline finished'
+            echo 'Pipeline execution completed'
+
+            // Nettoyage
             dir('demo1') {
-                bat 'docker-compose ps || echo "Docker compose not available"'
+                bat 'docker-compose ps'
             }
+
+            // Générer un rapport
+            publishHTML(
+                target: [
+                    reportName: 'JaCoCo Report',
+                    reportDir: 'demo1/target/site/jacoco',
+                    reportFiles: 'index.html',
+                    keepAll: true
+                ]
+            )
         }
+
         success {
-            echo 'Pipeline successful!'
-            dir('demo1') {
-                bat 'curl -f http://localhost:8081 || echo "Application not ready yet"'
-            }
+            echo 'All quality gates passed!'
+            emailext(
+                subject: " Pipeline Success: ${env.JOB_NAME}",
+                body: "Build ${env.BUILD_NUMBER} completed successfully!",
+                to: 'votre@email.com'
+            )
         }
+
         failure {
-            echo 'Pipeline failed'
+            echo 'Pipeline failed!'
             dir('demo1') {
-                bat 'docker-compose logs --tail=20 app || echo "Could not get logs"'
+                bat 'docker-compose logs --tail=50 || echo "Could not get logs"'
             }
         }
     }
