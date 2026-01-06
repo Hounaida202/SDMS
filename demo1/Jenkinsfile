@@ -61,19 +61,24 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
-            steps {
-                dir('demo1') {
-                    bat 'docker-compose down || echo "No containers to stop"'
-                    bat 'docker-compose up -d'
-                    bat 'timeout /t 30 /nobreak'
-                    bat 'docker-compose ps'
+   stage('Deploy') {
+       steps {
+           dir('demo1') {
+               bat 'docker-compose down || echo "No containers to stop"'
+               bat 'docker-compose up -d'
 
-                    bat 'curl http://localhost:8080/health || echo "Service may still be starting"'
-                }
-            }
-        }
-    }
+               // Attendre avec une simple pause PowerShell
+               powershell 'Start-Sleep -Seconds 10'
+
+               // Vérifier l'état des conteneurs
+               bat 'docker-compose ps'
+               bat 'docker logs demo1-app-1 --tail 20'
+
+               // Vérification santé (avec gestion d'erreur)
+               bat 'curl -f http://localhost:8080/actuator/health || echo "Health check failed, but continuing..."'
+           }
+       }
+   }
 
     post {
         always {
