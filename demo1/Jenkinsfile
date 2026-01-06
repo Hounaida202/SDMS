@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'  // ID des credentials dans Jenkins
+        DOCKERHUB_CREDENTIALS = 'hounaida202'  // ID des credentials dans Jenkins
         IMAGE_NAME = 'hounaida202/demo1-app'
         SONAR_TOKEN = '81b9323901c5b4fffb0a0adfe88b79e178a92f42'
     }
