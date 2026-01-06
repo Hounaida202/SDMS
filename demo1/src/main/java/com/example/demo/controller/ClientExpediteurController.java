@@ -21,6 +21,7 @@ public class ClientExpediteurController {
     @PostMapping
     public ResponseEntity<ClientExpediteurDTO> creer(@Valid @RequestBody ClientExpediteurDTO dto) {
         ClientExpediteurDTO created = service.creer(dto);
+        String test = "juste un message de test";
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
