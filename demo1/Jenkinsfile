@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = 'etrichi'
         IMAGE_NAME = 'hounaida202/demo1-app'
-        SONAR_TOKEN = credentials('sonar-token')
+        SONAR_TOKEN = credentials('5dec20621a223f3621fdb93ca284fbad5d0f1b1e')
     }
 
     stages {
