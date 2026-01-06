@@ -1,15 +1,81 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKERHUB_CREDENTIALS = 'etrichi'
+        IMAGE_NAME = 'hounaida202/demo1-app'
+    }
+
     stages {
-        stage('Build & Deploy') {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/Hounaida202/SDMS.git'
+            }
+        }
+
+        stage('Run Unit Tests') {
             steps {
                 dir('demo1') {
-                    bat 'mvn clean package'
-                    bat 'docker build -t app .'
-                    bat 'docker-compose down || echo ok'
-                    bat 'docker-compose up -d'
+                    bat 'mvn clean test'
                 }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('demo1') {
+                    bat "docker build -t %IMAGE_NAME% ."
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                dir('demo1') {
+                    withCredentials([usernamePassword(
+                        credentialsId: DOCKERHUB_CREDENTIALS,
+                        passwordVariable: 'PASS',
+                        usernameVariable: 'USER'
+                    )]) {
+                        bat """
+                            echo %PASS% | docker login -u %USER% --password-stdin
+                            docker push %IMAGE_NAME%
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                dir('demo1') {
+                    bat 'docker-compose down || echo "No containers to stop"'
+                    bat 'docker-compose up -d'
+                    bat 'ping -n 10 127.0.0.1 > nul'
+                    bat 'docker-compose ps'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished'
+            dir('demo1') {
+                bat 'docker-compose ps || echo "Docker compose not available"'
+            }
+        }
+        success {
+            echo 'Pipeline successful!'
+            dir('demo1') {
+                bat 'curl -f http://localhost:8081 || echo "Application not ready yet"'
+            }
+        }
+        failure {
+            echo 'Pipeline failed'
+            dir('demo1') {
+                bat 'docker-compose logs --tail=20 app || echo "Could not get logs"'
             }
         }
     }
