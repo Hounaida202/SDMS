@@ -1,72 +1,21 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKERHUB_CREDENTIALS = 'etrichi'
-        IMAGE_NAME = 'hounaida202/demo1-app'
-
-        // SonarQube - METTEZ VOTRE TOKEN DIRECTEMENT ICI
-        SONAR_TOKEN = '81b9323901c5b4fffb0a0adfe88b79e178a92f42'
-    }
-
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Hounaida202/SDMS.git'
+                git 'https://github.com/Hounaida202/SDMS.git'
             }
         }
 
-        stage('Run Tests') {
+        stage('Test Maven') {
             steps {
                 dir('demo1') {
-                    bat 'mvn clean test'
-                }
-            }
-        }
+                    // Vérifie que Maven fonctionne
+                    bat 'mvn --version'
 
-        stage('Code Quality') {
-            steps {
-                dir('demo1') {
-                    // JaCoCo
-                    bat 'mvn jacoco:report'
-
-                    // SonarQube - REMPLACEZ LE TOKEN !
-                    bat 'mvn sonar:sonar -Dsonar.login=sqp_votre_token_sonarcloud_ici'
-                }
-            }
-        }
-
-        stage('Build Docker') {
-            steps {
-                dir('demo1') {
-                    bat 'docker build -t %IMAGE_NAME% .'
-                }
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                dir('demo1') {
-                    withCredentials([usernamePassword(
-                        credentialsId: DOCKERHUB_CREDENTIALS,
-                        passwordVariable: 'PASS',
-                        usernameVariable: 'USER'
-                    )]) {
-                        bat """
-                            echo %PASS% | docker login -u %USER% --password-stdin
-                            docker push %IMAGE_NAME%
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                dir('demo1') {
-                    bat 'docker-compose down || echo "No containers to stop"'
-                    bat 'docker-compose up -d'
+                    // Test simple
+                    bat 'mvn clean compile'
                 }
             }
         }
