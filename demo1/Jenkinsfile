@@ -1,101 +1,15 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKERHUB_CREDENTIALS = 'etrichi'
-        IMAGE_NAME = 'hounaida202/demo1-app'
-    }
-
     stages {
-        stage('Check Docker') {
-            steps {
-                script {
-                    echo 'Checking Docker status...'
-                    // Vérifier si Docker fonctionne
-                    def dockerCheck = bat(
-                        script: 'docker version > nul 2>&1 && echo DOCKER_RUNNING || echo DOCKER_NOT_RUNNING',
-                        returnStdout: true
-                    ).trim()
-
-                    if (dockerCheck.contains('DOCKER_NOT_RUNNING')) {
-                        error('Docker is not running! Please start Docker Desktop manually.')
-                    }
-                }
-            }
-        }
-
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/Hounaida202/SDMS.git'
-            }
-        }
-
-
-        stage('Run Unit Tests') {
+        stage('Build & Deploy') {
             steps {
                 dir('demo1') {
-                    echo 'Run unit tests'
-                    bat 'mvn test'
+                    bat 'mvn clean package'
+                    bat 'docker build -t app .'
+                    bat 'docker-compose down || echo ok'
+                    bat 'docker-compose up -d'
                 }
-            }
-        }
-
-        stage('Build Docker Images') {
-            steps {
-                dir('demo1') {
-                    echo 'Build Docker App'
-                    bat "docker build -t %IMAGE_NAME% ."
-                }
-            }
-        }
-
-        stage('Push Docker Images') {
-            steps {
-                dir('demo1') {
-                    echo 'Push Docker App to Docker Hub'
-                    withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", passwordVariable: 'PASS', usernameVariable: 'USER')]) {
-                        bat "echo %PASS% | docker login -u %USER% --password-stdin"
-                        bat "docker push %IMAGE_NAME%"
-                    }
-                }
-            }
-        }
-
-        stage('Deploy / Run Containers') {
-            steps {
-                dir('demo1') {
-                    echo 'Deploy with Docker Compose'
-                    bat "docker-compose down || echo 'Aucun conteneur à arrêter'"
-                    bat "docker-compose up -d"
-
-                    // Attendre 10 secondes pour que les conteneurs démarrent (méthode Windows)
-                    bat 'ping -n 10 127.0.0.1 > nul'
-
-                    // Vérifier l'état des conteneurs
-                    bat 'docker-compose ps'
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            echo 'Pipeline finished'
-            dir('demo1') {
-                bat 'docker-compose ps || echo "Docker compose non disponible"'
-            }
-        }
-        success {
-            echo 'Pipeline successful!'
-
-            bat 'curl -f http://localhost:8081 || echo "Application pas encore prête"'
-        }
-        failure {
-            echo 'Pipeline failed'
-            dir('demo1') {
-                echo 'Derniers logs de l\'application:'
-                bat 'docker-compose logs --tail=50 app || echo "Impossible de récupérer les logs"'
             }
         }
     }
