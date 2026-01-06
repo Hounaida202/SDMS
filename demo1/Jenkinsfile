@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // Utilisez l'ID que vous avez créé dans Jenkins
         DOCKERHUB_CREDENTIALS = 'hounaida202'
         IMAGE_NAME = 'hounaida202/demo1-app'
         SONAR_TOKEN = '81b9323901c5b4fffb0a0adfe88b79e178a92f42'
@@ -37,7 +36,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 dir('demo1') {
-                    // Ajouter un tag avec le numéro de build
                     bat "docker build -t ${IMAGE_NAME}:latest -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
                 }
             }
@@ -52,7 +50,6 @@ pipeline {
                             passwordVariable: 'DOCKER_PASSWORD',
                             usernameVariable: 'DOCKER_USERNAME'
                         )]) {
-                            // Méthode pour Windows avec echo
                             bat """
                                 echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
                                 docker push ${env.IMAGE_NAME}:latest
@@ -72,7 +69,6 @@ pipeline {
                     bat 'timeout /t 30 /nobreak'
                     bat 'docker-compose ps'
 
-                    // Vérification supplémentaire
                     bat 'curl http://localhost:8080/health || echo "Service may still be starting"'
                 }
             }
@@ -82,14 +78,12 @@ pipeline {
     post {
         always {
             echo 'Pipeline terminé'
-            // Nettoyage
             dir('demo1') {
                 bat 'docker system prune -f || echo "Cleanup failed"'
             }
         }
         success {
             echo 'SUCCÈS : Tout est OK !'
-            // Notification optionnelle
             emailext (
                 subject: "Build ${JOB_NAME} - ${BUILD_NUMBER} SUCCÈS",
                 body: "Le pipeline Jenkins a réussi.\n\nDétails :\nJob: ${JOB_NAME}\nBuild: ${BUILD_NUMBER}\nImage: ${IMAGE_NAME}:${BUILD_NUMBER}\n\nConsultez SonarQube pour les métriques qualité.",
@@ -101,7 +95,7 @@ pipeline {
             emailext (
                 subject: "Build ${JOB_NAME} - ${BUILD_NUMBER} ÉCHEC",
                 body: "Le pipeline Jenkins a échoué.\n\nConsultez les logs: ${BUILD_URL}",
-                to: 'votre-email@exemple.com'
+                to: 'etrichih@gmail.com'
             )
         }
     }
