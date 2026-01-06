@@ -1,18 +1,82 @@
 pipeline {
     agent any
 
+    environment {
+        // Docker
+        DOCKERHUB_CREDENTIALS = 'etrichi'
+        IMAGE_NAME = 'hounaida202/demo1-app'
+
+        // SonarQube - VOTRE TOKEN
+        SONAR_TOKEN = '81b9323901c5b4fffb0a0adfe88b79e178a92f42'
+    }
+
     stages {
-        stage('Build & Test') {
+        stage('Build & Tests') {
             steps {
                 dir('demo1') {
-                    // Test Maven
-                    bat 'mvn --version'
-
-                    // Clean et compile
+                    // 1. Compilation
                     bat 'mvn clean compile'
 
-                    // Tests unitaires
+                    // 2. Tests unitaires
                     bat 'mvn test'
+
+                    // 3. Rapport de couverture (JaCoCo)
+                    bat 'mvn jacoco:report'
+                }
+            }
+        }
+
+        stage('Code Quality - SonarQube') {
+            steps {
+                dir('demo1') {
+                    // 4. Analyse SonarQube
+                    // Version SIMPLE sans plugin dans pom.xml
+                    bat '''
+                        mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar \
+                            -Dsonar.login=%SONAR_TOKEN%
+                    '''
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('demo1') {
+                    // 5. Build Docker
+                    bat 'docker build -t %IMAGE_NAME% .'
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                dir('demo1') {
+                    withCredentials([usernamePassword(
+                        credentialsId: DOCKERHUB_CREDENTIALS,
+                        passwordVariable: 'PASS',
+                        usernameVariable: 'USER'
+                    )]) {
+                        bat """
+                            echo %PASS% | docker login -u %USER% --password-stdin
+                            docker push %IMAGE_NAME%
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                dir('demo1') {
+                    // 6. Déploiement
+                    bat 'docker-compose down || echo "No containers to stop"'
+                    bat 'docker-compose up -d'
+
+                    // Attendre que l'application démarre
+                    bat 'timeout /t 30 /nobreak'
+
+                    // Vérifier
+                    bat 'docker-compose ps'
                 }
             }
         }
@@ -20,7 +84,15 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline completed'
+            echo ' Pipeline terminé'
+        }
+
+        success {
+            echo ' SUCCÈS : Tout est OK !'
+        }
+
+        failure {
+            echo ' ÉCHEC : Vérifiez les logs'
         }
     }
 }
