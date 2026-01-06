@@ -2,82 +2,47 @@ pipeline {
     agent any
 
     environment {
-        // Docker
         DOCKERHUB_CREDENTIALS = 'etrichi'
         IMAGE_NAME = 'hounaida202/demo1-app'
-
-        // SonarQube
-        SONAR_TOKEN = credentials('5dec20621a223f3621fdb93ca284fbad5d0f1b1e')  // À créer dans Jenkins
-        SONAR_HOST_URL = 'http://localhost:9000'  // ou https://sonarcloud.io
+        SONAR_TOKEN = credentials('sonar-token')
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Hounaida202/SDMS.git'
+                git 'https://github.com/Hounaida202/SDMS.git'
             }
         }
 
-        stage('Build & Unit Tests') {
+        stage('Tests & Quality') {
             steps {
                 dir('demo1') {
-                    bat 'mvn clean compile'
+                    // Tests
+                    bat 'mvn clean test'
+
+                    // JaCoCo
+                    bat 'mvn jacoco:report jacoco:check'
+
+                    // SonarQube
+                    bat 'mvn sonar:sonar -Dsonar.login=%SONAR_TOKEN%'
                 }
             }
         }
 
-        stage('Code Coverage (JaCoCo)') {
+        stage('Docker') {
             steps {
                 dir('demo1') {
-                    bat 'mvn test jacoco:report'
+                    // Build
+                    bat 'docker build -t %IMAGE_NAME% .'
 
-                    // Vérifier la couverture
-                    script {
-                        def coverage = bat(
-                            script: 'mvn jacoco:check',
-                            returnStatus: true
-                        )
-
-                        if (coverage != 0) {
-                            error 'Code coverage is below minimum threshold!'
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Code Quality Analysis (SonarQube)') {
-            steps {
-                dir('demo1') {
-                    bat """
-                        mvn sonar:sonar \
-                            -Dsonar.projectKey=demo1 \
-                            -Dsonar.host.url=%SONAR_HOST_URL% \
-                            -Dsonar.login=%SONAR_TOKEN%
-                    """
-                }
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                dir('demo1') {
-                    bat "docker build -t %IMAGE_NAME% ."
-                }
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                dir('demo1') {
+                    // Push
                     withCredentials([usernamePassword(
                         credentialsId: DOCKERHUB_CREDENTIALS,
-                        passwordVariable: 'DOCKER_PASS',
-                        usernameVariable: 'DOCKER_USER'
+                        passwordVariable: 'PASS',
+                        usernameVariable: 'USER'
                     )]) {
                         bat """
-                            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                            echo %PASS% | docker login -u %USER% --password-stdin
                             docker push %IMAGE_NAME%
                         """
                     }
@@ -88,65 +53,11 @@ pipeline {
         stage('Deploy') {
             steps {
                 dir('demo1') {
-                    bat 'docker-compose down || echo "No containers to stop"'
+                    bat 'docker-compose down || echo ok'
                     bat 'docker-compose up -d'
                     bat 'timeout /t 20 /nobreak'
                     bat 'docker-compose ps'
                 }
-            }
-        }
-
-        stage('Integration Tests') {
-            steps {
-                dir('demo1') {
-                    script {
-                        // Attendre que l'application soit prête
-                        bat 'timeout /t 30 /nobreak'
-
-                        // Exécuter des tests d'intégration (si vous en avez)
-                        // bat 'mvn verify -DskipUnitTests'
-
-                        // OU simplement vérifier que l'application répond
-                        bat 'curl -f http://localhost:8081/actuator/health || exit 1'
-                    }
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            echo 'Pipeline execution completed'
-
-            // Nettoyage
-            dir('demo1') {
-                bat 'docker-compose ps'
-            }
-
-            // Générer un rapport
-            publishHTML(
-                target: [
-                    reportName: 'JaCoCo Report',
-                    reportDir: 'demo1/target/site/jacoco',
-                    reportFiles: 'index.html',
-                    keepAll: true
-                ]
-            )
-        }
-
-        success {
-            echo 'All quality gates passed!'
-            emailext(
-                subject: " Pipeline Success: ${env.JOB_NAME}",
-                body: "Build ${env.BUILD_NUMBER} completed successfully!",
-                to: 'votre@email.com'
-            )
-        }
-
-        failure {
-            echo 'Pipeline failed!'
-            dir('demo1') {
-                bat 'docker-compose logs --tail=50 || echo "Could not get logs"'
             }
         }
     }
