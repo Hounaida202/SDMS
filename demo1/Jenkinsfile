@@ -4,38 +4,50 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = 'etrichi'
         IMAGE_NAME = 'hounaida202/demo1-app'
-        SONAR_TOKEN = credentials('5dec20621a223f3621fdb93ca284fbad5d0f1b1e')
+
+        // SonarQube - METTEZ VOTRE TOKEN DIRECTEMENT ICI
+        SONAR_TOKEN = '81b9323901c5b4fffb0a0adfe88b79e178a92f42'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                git 'https://github.com/Hounaida202/SDMS.git'
+                git branch: 'main',
+                    url: 'https://github.com/Hounaida202/SDMS.git'
             }
         }
 
-        stage('Tests & Quality') {
+        stage('Run Tests') {
             steps {
                 dir('demo1') {
-                    // Tests
                     bat 'mvn clean test'
-
-                    // JaCoCo
-                    bat 'mvn jacoco:report jacoco:check'
-
-                    // SonarQube
-                    bat 'mvn sonar:sonar -Dsonar.login=%SONAR_TOKEN%'
                 }
             }
         }
 
-        stage('Docker') {
+        stage('Code Quality') {
             steps {
                 dir('demo1') {
-                    // Build
-                    bat 'docker build -t %IMAGE_NAME% .'
+                    // JaCoCo
+                    bat 'mvn jacoco:report'
 
-                    // Push
+                    // SonarQube - REMPLACEZ LE TOKEN !
+                    bat 'mvn sonar:sonar -Dsonar.login=sqp_votre_token_sonarcloud_ici'
+                }
+            }
+        }
+
+        stage('Build Docker') {
+            steps {
+                dir('demo1') {
+                    bat 'docker build -t %IMAGE_NAME% .'
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                dir('demo1') {
                     withCredentials([usernamePassword(
                         credentialsId: DOCKERHUB_CREDENTIALS,
                         passwordVariable: 'PASS',
@@ -53,10 +65,8 @@ pipeline {
         stage('Deploy') {
             steps {
                 dir('demo1') {
-                    bat 'docker-compose down || echo ok'
+                    bat 'docker-compose down || echo "No containers to stop"'
                     bat 'docker-compose up -d'
-                    bat 'timeout /t 20 /nobreak'
-                    bat 'docker-compose ps'
                 }
             }
         }
