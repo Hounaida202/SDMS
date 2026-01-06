@@ -2,11 +2,8 @@ pipeline {
     agent any
 
     environment {
-        // Docker
         DOCKERHUB_CREDENTIALS = 'etrichi'
         IMAGE_NAME = 'hounaida202/demo1-app'
-
-        // SonarQube - VOTRE TOKEN
         SONAR_TOKEN = '81b9323901c5b4fffb0a0adfe88b79e178a92f42'
     }
 
@@ -14,13 +11,10 @@ pipeline {
         stage('Build & Tests') {
             steps {
                 dir('demo1') {
-                    // 1. Compilation
-                    bat 'mvn clean compile'
+                    // 1. Clean, compile, tests
+                    bat 'mvn clean compile test'
 
-                    // 2. Tests unitaires
-                    bat 'mvn test'
-
-                    // 3. Rapport de couverture (JaCoCo)
+                    // 2. Rapport JaCoCo
                     bat 'mvn jacoco:report'
                 }
             }
@@ -29,12 +23,17 @@ pipeline {
         stage('Code Quality - SonarQube') {
             steps {
                 dir('demo1') {
-                    // 4. Analyse SonarQube
-                    // Version SIMPLE sans plugin dans pom.xml
-                    bat '''
-                        mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar \
-                            -Dsonar.login=%SONAR_TOKEN%
-                    '''
+                    // 3. SonarQube
+                    bat 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar -Dsonar.login=%SONAR_TOKEN%'
+                }
+            }
+        }
+
+        stage('Package JAR') {
+            steps {
+                dir('demo1') {
+                    // 4. IMPORTANT : Créer le JAR
+                    bat 'mvn package -DskipTests'
                 }
             }
         }
@@ -42,7 +41,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 dir('demo1') {
-                    // 5. Build Docker
+                    // 5. Maintenant Docker trouvera le JAR
                     bat 'docker build -t %IMAGE_NAME% .'
                 }
             }
@@ -68,14 +67,9 @@ pipeline {
         stage('Deploy') {
             steps {
                 dir('demo1') {
-                    // 6. Déploiement
                     bat 'docker-compose down || echo "No containers to stop"'
                     bat 'docker-compose up -d'
-
-                    // Attendre que l'application démarre
                     bat 'timeout /t 30 /nobreak'
-
-                    // Vérifier
                     bat 'docker-compose ps'
                 }
             }
@@ -84,13 +78,11 @@ pipeline {
 
     post {
         always {
-            echo ' Pipeline terminé'
+            echo 'Pipeline terminé'
         }
-
         success {
             echo ' SUCCÈS : Tout est OK !'
         }
-
         failure {
             echo ' ÉCHEC : Vérifiez les logs'
         }
