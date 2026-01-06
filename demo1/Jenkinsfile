@@ -2,22 +2,25 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/Hounaida202/SDMS.git'
-            }
-        }
-
-        stage('Test Maven') {
+        stage('Build & Test') {
             steps {
                 dir('demo1') {
-                    // Vérifie que Maven fonctionne
+                    // Test Maven
                     bat 'mvn --version'
 
-                    // Test simple
+                    // Clean et compile
                     bat 'mvn clean compile'
+
+                    // Tests unitaires
+                    bat 'mvn test'
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed'
         }
     }
 }
